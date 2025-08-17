@@ -1,0 +1,12 @@
+#version: '3.4'
+ 
+services:
+  api:
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - ENDPOINTS=custom,agents
+  rag_api:
+    image: ghcr.io/danny-avila/librechat-rag-api-dev:latest

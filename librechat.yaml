@@ -1,0 +1,129 @@
+# Configuration version (required)
+version: 1.2.5
+ 
+# Cache settings: Set to true to enable caching
+cache: true
+
+interface:
+  termsOfService:
+    externalUrl: "https://example.com/terms"
+    openNewTab: true
+    modalAcceptance: true
+    modalTitle: "Terms of Service"
+  mcpServers:
+    placeholder: "MCP Servers"
+  modelSelect: true
+  parameters: true
+  sidePanel: true
+  presets: true
+  prompts: true
+  bookmarks: false
+  multiConvo: false
+  agents: true
+  customWelcome: "Hey {{user.name}}! Welcome to LibreChat"
+
+
+fileConfig:
+  endpoints:
+    agents:
+      fileLimit: 5
+      fileSizeLimit: 100  # Maximum size for an individual file in MB
+      totalSizeLimit: 500  # Maximum total size for all files in a single request in MB
+      supportedMimeTypes:
+        - "image/.*"
+        - "application/pdf"
+        - "video/.*"
+        - "application/vnd.ms-excel"
+        - "audio/mp3"
+        - "audio/mpeg"
+        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        - "application/msword"
+    default:
+      totalSizeLimit: 20
+    custom:
+      fileLimit: 5
+      fileSizeLimit: 100
+      supportedMimeTypes:
+        - "image/.*"
+        - "application/pdf"
+        - "text/.*"
+  serverFileSizeLimit: 1000
+  avatarSizeLimit: 2
+  imageGeneration:
+    percentage: 100
+    px: 1024
+
+endpoints:
+  agents:
+    # (optional) Default recursion depth for agents, defaults to 25
+    recursionLimit: 50
+    # (optional) Max recursion depth for agents, defaults to 25
+    maxRecursionLimit: 100
+    # (optional) Disable the builder interface for agents
+    disableBuilder: false
+    # (optional) Agent Capabilities available to all users. Omit the ones you wish to exclude. Defaults to list below.
+    # capabilities: ["execute_code", "file_search", "actions", "tools", "artifacts", "ocr", "chain", "web_search"]
+    capabilities: [ "file_search", "actions", "tools", "chain" ]
+  custom:
+    - name: "llama.cpp"
+      apiKey: "whatever"
+      baseURL: "http://host.docker.internal:8080/v1" 
+      models:
+        default: [
+          "Devstral-Small-2507-Q8_0.gguf"
+          ]
+        fetch: false # fetching list of models is not supported
+      titleConvo: true
+      titleModel: "current_model"
+      summarize: false
+      summaryModel: "current_model"
+      forcePrompt: false
+      modelDisplayLabel: "llama.cpp"
+
+
+
+# Pin a single default model/preset so new chats just work
+modelSpecs:
+  list:
+    - name: "local-llama"
+      label: "Local Llama"
+#      iconUrl: "/app/client/public/assets/openai.svg"
+      default: true
+      preset:
+        endpoint: "llama.cpp"     # must match the custom endpoint name above
+        model: "Devstral-Small-2507-Q8_0.gguf"
+#        temperature: 1.0
+#        top_p: 0.95
+        max_tokens: 128000
+    - name: "agents"
+      label: "AI Agents"
+      description: "Access specialized AI agents for complex tasks."
+      showIconInMenu: true
+      showIconInHeader: true
+      preset:
+        model: "Devstral-Small-2507-Q8_0.gguf"
+        default: true
+        endpoint: "agents"
+        max_tokens: 128000
+#        temperature: 0.7
+#        top_p: 0.95
+        modelLabel: "SomethingXO"
+        greeting: |
+          Select an existing agent or create a new one using the `Agent Builder` in the menu on the right
+
+
+# Example MCP Servers Object Structure
+mcpServers:
+  filesystem:
+    # type: stdio
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+      - /tmp
+    iconPath: /home/user/LibreChat/client/public/assets/logo.svg
+    # The “wrench” icon shows up if no icon is provided as it is the default rendering.
+  mymcp:
+    type: streamable-http
+    url: http://host.docker.internal:3001/mcp
