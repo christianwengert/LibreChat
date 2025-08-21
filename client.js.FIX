@@ -1,7 +1,10 @@
+//pkill -f node || true
 require('events').EventEmitter.defaultMaxListeners = 100;
 const { logger } = require('@librechat/data-schemas');
 const { DynamicStructuredTool } = require('@langchain/core/tools');
 const { getBufferString, HumanMessage } = require('@langchain/core/messages');
+const z = require('zod'); // or import { z } from 'zod';/.schema
+libr
 const {
   sendEvent,
   createRun,
@@ -49,7 +52,7 @@ const BaseClient = require('~/app/clients/BaseClient');
 const { getRoleByName } = require('~/models/Role');
 const { loadAgent } = require('~/models/Agent');
 const { getMCPManager } = require('~/config');
-
+console.log('Hihihi');
 const omitTitleOptions = new Set([
   'stream',
   'thinking',
@@ -750,7 +753,7 @@ class AgentClient extends BaseClient {
   async chatCompletion({ payload, abortController = null }) {
     /** @type {Partial<GraphRunnableConfig>} */
     let config;
-    /** @type {ReturnType<createRun>} */
+    /** @type {ReturnType<reateRun>} */
     let run;
     /** @type {Promise<(TAttachment | null)[] | undefined>} */
     let memoryPromise;
@@ -768,11 +771,6 @@ class AgentClient extends BaseClient {
           last_agent_index: this.agentConfigs?.size ?? 0,
           user_id: this.user ?? this.options.req.user?.id,
           hide_sequential_outputs: this.options.agent.hide_sequential_outputs,
-          requestBody: {
-            messageId: this.responseMessageId,
-            conversationId: this.conversationId,
-            parentMessageId: this.parentMessageId,
-          },
           user: this.options.req.user,
         },
         recursionLimit: agentsEConfig?.recursionLimit ?? 25,
@@ -787,18 +785,6 @@ class AgentClient extends BaseClient {
         this.indexTokenCountMap,
         toolSet,
       );
-
-      // PAYLOAD
-      //
-      // [ { role: 'user', content: [ [Object] ] } ]
-      //
-      // Set(2) {
-      //
-      //   'get_current_weather_mcp_weather',
-      //
-      //   'get_weather_forecast_mcp_weather'
-      //
-      // }
 
       /**
        *
@@ -836,8 +822,6 @@ class AgentClient extends BaseClient {
         const systemMessage = Object.values(agent.toolContextMap ?? {})
           .join('\n')
           .trim();
-
-
         let systemContent = [
           systemMessage,
           agent.instructions ?? '',
@@ -845,7 +829,6 @@ class AgentClient extends BaseClient {
         ]
           .join('\n')
           .trim();
-
         if (noSystemMessages === true) {
           agent.instructions = undefined;
           agent.additional_instructions = undefined;
@@ -856,7 +839,7 @@ class AgentClient extends BaseClient {
 
         if (noSystemMessages === true && systemContent?.length) {
           const latestMessageContent = _messages.pop().content;
-          if (typeof latestMessageContent !== 'string') {
+          if (typeof latestMessage !== 'string') {
             latestMessageContent[0].text = [systemContent, latestMessageContent[0].text].join('\n');
             _messages.push(new HumanMessage({ content: latestMessageContent }));
           } else {
@@ -876,10 +859,46 @@ class AgentClient extends BaseClient {
         ) {
           messages = addCacheControl(messages);
         }
-
         if (i === 0) {
           memoryPromise = this.runMemory(messages);
         }
+
+        function llamaSafeZod(s) {
+          const t = s?._def?.typeName;
+          if (!t) return s;
+
+          if (t === 'ZodNullable') return llamaSafeZod(s._def.innerType).optional();
+          if (t === 'ZodOptional') return z.optional(llamaSafeZod(s._def.innerType));
+
+          if (t === 'ZodObject') {
+            const shape = s.shape; // s.shape is a getter in recent Zod
+            const newShape = Object.fromEntries(
+              Object.entries(shape).map(([k, v]) => [k, llamaSafeZod(v)]),
+            );
+            return z.object(newShape).passthrough(); // <-- critical: avoids ZodNever
+          }
+
+          if (t === 'ZodArray') return z.array(llamaSafeZod(s._def.type));
+          if (t === 'ZodRecord') return z.record(llamaSafeZod(s._def.valueType));
+          if (t === 'ZodUnion') return z.union(s._def.options.map(llamaSafeZod));
+          if (t === 'ZodDiscriminatedUnion')
+            return z.union([...s._def.optionsMap.values()].map(llamaSafeZod));
+          if (t === 'ZodTuple') return z.tuple(s._def.items.map(llamaSafeZod));
+          if (t === 'ZodDefault')
+            return llamaSafeZod(s._def.innerType).default(s._def.defaultValue());
+          if (t === 'ZodEffects')
+            return z.ZodEffects.create(llamaSafeZod(s._def.schema), s._def.effect);
+          return s;
+        }
+        if (agent.tools) {
+          for (let i = 0; i < agent.tools.length; i++) {
+            agent['tools'][i].schema = llamaSafeZod(agent['tools'][i].schema);
+          }
+        }
+        //agent['tools'][0].schema = llamaSafeZod(agent['tools'][0].schema)
+        //agent['tools'][1].schema = llamaSafeZod(agent['tools'][1].schema)
+        //console.log(agent['tools'][0].schema)
+        // schema = llamaSafeZod(schema);
 
         run = await createRun({
           agent,
@@ -943,7 +962,8 @@ class AgentClient extends BaseClient {
 
         config.signal = null;
       };
-
+      console.log('AGENT');
+      console.log(initialMessages);
       await runAgent(this.options.agent, initialMessages);
       let finalContentStart = 0;
       if (
@@ -1021,7 +1041,8 @@ class AgentClient extends BaseClient {
             const bufferMessage = new HumanMessage(bufferString);
             runIndexCountMap[contextMessages.length] = tokenCounter(bufferMessage);
             const currentMessages = [...contextMessages, bufferMessage];
-
+            console.log('AGENT2');
+            console.log(currentMessages);
             await runAgent(agent, currentMessages, i, contentData, runIndexCountMap);
           } catch (err) {
             logger.error(
@@ -1053,7 +1074,6 @@ class AgentClient extends BaseClient {
         if (attachments && attachments.length > 0) {
           this.artifactPromises.push(...attachments);
         }
-
         await this.recordCollectedUsage({ context: 'message' });
       } catch (err) {
         logger.error(
@@ -1099,6 +1119,7 @@ class AgentClient extends BaseClient {
 
     /** @type {import('@librechat/agents').ClientOptions} */
     let clientOptions = {
+      maxTokens: 75,
       model: agent.model || agent.model_parameters.model,
     };
 
@@ -1165,13 +1186,15 @@ class AgentClient extends BaseClient {
       clientOptions.configuration = options.configOptions;
     }
 
-    if (clientOptions.maxTokens != null) {
+    const shouldRemoveMaxTokens = /\b(o\d|gpt-[5-9])\b/i.test(clientOptions.model);
+    if (shouldRemoveMaxTokens && clientOptions.maxTokens != null) {
       delete clientOptions.maxTokens;
+    } else if (!shouldRemoveMaxTokens && !clientOptions.maxTokens) {
+      clientOptions.maxTokens = 75;
     }
-    if (clientOptions?.modelKwargs?.max_completion_tokens != null) {
+    if (shouldRemoveMaxTokens && clientOptions?.modelKwargs?.max_completion_tokens != null) {
       delete clientOptions.modelKwargs.max_completion_tokens;
-    }
-    if (clientOptions?.modelKwargs?.max_output_tokens != null) {
+    } else if (shouldRemoveMaxTokens && clientOptions?.modelKwargs?.max_output_tokens != null) {
       delete clientOptions.modelKwargs.max_output_tokens;
     }
 

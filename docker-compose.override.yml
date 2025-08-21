@@ -1,6 +1,7 @@
 #version: '3.4'
  
 services:
+  # ────────────────────── LibreChat overrides ──────────────────────
   api:
     volumes:
       - ./librechat.yaml:/app/librechat.yaml
@@ -10,3 +11,117 @@ services:
       - ENDPOINTS=custom,agents
   rag_api:
     image: ghcr.io/danny-avila/librechat-rag-api-dev:latest
+# ────────────────────── Extra services ──────────────────────
+#  cyberchef-server:
+#    container_name: cyberchef-server      # optional – makes the name stable
+#    image: cyberchef-server                # defaults to latest tag
+#    ports:
+#      - "3000:3000"
+#    restart: unless-stopped                # optional but handy for production
+#  cyberchef-server:
+#    # optional – gives a stable, human‑readable container name
+#    container_name: cyberchef-server
+#    platform: linux/amd64          # forces Docker to pull the amd64 variant
+#    # Build the image locally from the Dockerfile in src/CyberChef‑server
+#    build:
+#      context: /Users/christian/src/CyberChef-server   # ← directory that contains the Dockerfile
+#      dockerfile: Dockerfile            # optional – defaults to “Dockerfile”
+#
+#    # The name/tag you want the built image to have (you can omit this and Compose
+#    # will create a name like ${COMPOSE_PROJECT_NAME}_cyberchef-server)
+#    image: cyberchef-server:latest
+#
+#    ports:
+#      - "3000:3000"
+#    restart: unless-stopped
+#
+#  qdrant:
+#    container_name: qdrant
+#    image: qdrant/qdrant
+#    platform: linux/amd64          # forces Docker to pull the amd64 variant
+#    ports:
+#      - "6333:6333"
+#      - "6334:6334"
+#    volumes:
+#      # Bind‑mount the host directory `./qdrant_storage` into the container.
+#      # The trailing `:z` (or `:Z` on SELinux systems) makes the mount
+#      # writable for the container.
+#      - "./qdrant_storage:/qdrant/storage:z"
+#    restart: unless-stopped
+#  # ── **AMD‑64‑only** service ────────────────────────────────────────
+#  # Example: a heavy‑weight image that only runs on x86_64 hosts
+#  amd64-llama-cpp-completion:
+#    container_name: llama.cpp-server-completion
+#    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+#    platform: linux/amd64          # forces Docker to pull the amd64 variant
+#    ports:
+#      - 8080:8000
+#    gpus: all
+#    profiles:
+#      - "amd64"             # <-- this makes the service opt‑in
+#    command:
+#      - --run
+#      - -m
+#      - /models/gpt-oss-120b-mxfp4-00001-of-00003.gguf
+#      - host
+#      - 0.0.0.0
+#      - --port 8000
+#      - -threads
+#      - "12"
+#      - -ngl
+#      - "100"
+#      - -c
+#      - "131072"
+#      - --cont-batching
+#      - --parallel
+#      - "1"
+#      - -fa
+#      - -a
+#      - gpt-oss-120b
+#      - --jinja
+#      - --mlock
+#      - --batch-size
+#      - "4096"
+#      - --ubatch-size
+#      - "4096"
+#      - --temp
+#      - "1.0"
+#      - --chat-template-kwargs
+#      - '{"reasoning_effort": "high" }'
+#      - --reasoning-format
+#      - auto
+#      - --top-k
+#      - "40"
+#      - --top-p
+#      - "1.0"
+#    volumes:
+#        - ${HOME}/models:/models
+#    restart: unless-stopped               # optional – keeps the container alive after a crash
+#  amd64-llama-cpp-embedding:
+#    container_name: llama.cpp-server-embedding
+#    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+#    platform: linux/amd64          # forces Docker to pull the amd64 variant
+#    ports:
+#      - 8081:8000
+#    gpus: all
+#    profiles:
+#      - "amd64"             # <-- this makes the service opt‑in
+#    command:  # ./build/bin/llama-server -m ~/Downloads/models/Qwen3-Embedding-0.6B-Q8_0.gguf --threads 8 --embeddings --port 8081 --pooling mean -b 4096
+#      - --run
+#      - -m
+#      - /models/Qwen3-Embedding-0.6B-Q8_0.gguf
+#      - host
+#      - 0.0.0.0
+#      - --port 8000
+#      - -threads
+#      - "8"
+#      - --embeddings
+#      - --pooling
+#      - mean
+#      - -ngl
+#      - "100"
+#      - --batch-size
+#      - "4096"
+#    volumes:
+#      - ${HOME}/models:/models
+#    restart: unless-stopped               # optional – keeps the container alive after a crash

@@ -26,7 +26,7 @@ services:
     image: mongo
     restart: always
     volumes:
-      - ./data-node:/data/db
+      - ./data-node-older-old:/data/db
     command: mongod --noauth
   meilisearch:
     container_name: chat-meilisearch

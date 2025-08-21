@@ -253,6 +253,7 @@ export function convertJsonSchemaToZod(
   options: ConvertJsonSchemaToZodOptions = {},
 ): z.ZodType | undefined {
   const { allowEmptyObject = true, dropFields, transformOneOfAnyOf = false } = options;
+  const LLAMA_SAFE = 1; // process.env.LLAMA_SAFE_SCHEMA === '1';
 
   // Handle oneOf/anyOf if transformOneOfAnyOf is enabled
   if (transformOneOfAnyOf) {
@@ -430,46 +431,70 @@ export function convertJsonSchemaToZod(
       shape[key] = fieldSchema;
     }
 
-    let objectSchema = z.object(shape);
+    // let objectSchema = z.object(shape);
+    // default to passthrough to avoid ZodNever -> {"not":{}}
+    let objectSchema = z.object(shape).passthrough();
 
+    // if (Array.isArray(schema.required) && schema.required.length > 0) {
     if (Array.isArray(schema.required) && schema.required.length > 0) {
       const partial = Object.fromEntries(
         Object.entries(shape).map(([key, value]) => [
           key,
-          schema.required?.includes(key) === true ? value : value.optional().nullable(),
+          schema.required?.includes(key) === true ? value : value.optional(),
         ]),
       );
-      objectSchema = z.object(partial);
+      // objectSchema = z.object(partial);
+      objectSchema = z.object(partial).passthrough();
     } else {
       const partialNullable = Object.fromEntries(
-        Object.entries(shape).map(([key, value]) => [key, value.optional().nullable()]),
+        // Object.entries(shape).map(([key, value]) => [key, value.optional().nullable()]),
+        Object.entries(shape).map(([key, value]) => [key, value.optional()]),
       );
-      objectSchema = z.object(partialNullable);
+      // objectSchema = z.object(partialNullable);
+      objectSchema = z.object(partialNullable).passthrough();
     }
 
     // Handle additionalProperties for open-ended objects
-    if (schema.additionalProperties === true || isBareObjectSchema) {
-      // This allows any additional properties with any type
-      // Bare object schemas are treated as passthrough to allow dynamic properties
-      zodSchema = objectSchema.passthrough();
-    } else if (typeof schema.additionalProperties === 'object') {
-      // For specific additional property types
+    // if (schema.additionalProperties === true || isBareObjectSchema) {
+    //   // This allows any additional properties with any type
+    //   // Bare object schemas are treated as passthrough to allow dynamic properties
+    //   zodSchema = objectSchema.passthrough();
+    // } else if (typeof schema.additionalProperties === 'object') {
+    //   // For specific additional property types
+    //   const additionalSchema = convertJsonSchemaToZod(
+    //     schema.additionalProperties as JsonSchemaType,
+    //   );
+    //   zodSchema = objectSchema.catchall((additionalSchema ?? z.unknown()) as z.ZodType);
+    // } else {
+    //   zodSchema = objectSchema;
+    // }
+    // Handle additionalProperties — keep explicit settings unless LLAMA_SAFE overrides
+    if (typeof schema.additionalProperties === 'object') {
       const additionalSchema = convertJsonSchemaToZod(
         schema.additionalProperties as JsonSchemaType,
       );
       zodSchema = objectSchema.catchall((additionalSchema ?? z.unknown()) as z.ZodType);
+    } else if (schema.additionalProperties === true || isBareObjectSchema) {
+      zodSchema = objectSchema.passthrough();
+    } else if (schema.additionalProperties === false) {
+      // llama.cpp dislikes the ZodNever -> {"not":{}} encoding; relax if LLAMA_SAFE
+      zodSchema = LLAMA_SAFE ? objectSchema.passthrough() : objectSchema.strip();
     } else {
-      zodSchema = objectSchema;
+      // JSON Schema default is additionalProperties: true
+      zodSchema = objectSchema.passthrough();
     }
   } else {
     zodSchema = z.unknown();
   }
 
   // Add description if present
+  // if (schema.description != null && schema.description !== '') {
+  // zodSchema = zodSchema.describe(schema.description);
+  // }
+  // Add description if present
   if (schema.description != null && schema.description !== '') {
     zodSchema = zodSchema.describe(schema.description);
   }
-
   return zodSchema;
 }
 
