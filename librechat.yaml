@@ -23,6 +23,20 @@ interface:
   customWelcome: "Hey {{user.name}}! Welcome to LibreChat"
 
 
+memory:  # this is a bit weird, did not yet fully understand how this works
+  disabled: false
+  validKeys: ["user_preferences", "conversation_context", "personal_info"]
+  tokenLimit: 2000
+  personalize: true
+  messageWindowSize: 5
+  agent:
+    provider: "llama.cpp"
+    model: "Devstral-Small-2507-Q8_0.gguf"
+    instructions: "You are a helpful assistant that remembers user preferences and context."
+    model_parameters:
+      temperature: 0.7
+      max_tokens: 1000
+
 fileConfig:
   endpoints:
     agents:
@@ -79,8 +93,12 @@ endpoints:
       summarize: false
       summaryModel: "current_model"
       forcePrompt: false
-      modelDisplayLabel: "llama.cpp"
-
+      modelDisplayLabel: "assistant"
+      titleMethod: "completion"
+      summaryMethod: "completion"
+#shared:
+#  titleMethod: "completion"
+#  summaryMethod: "completion"
 
 
 # Pin a single default model/preset so new chats just work
@@ -124,6 +142,9 @@ mcpServers:
       - /tmp
     iconPath: /home/user/LibreChat/client/public/assets/logo.svg
     # The “wrench” icon shows up if no icon is provided as it is the default rendering.
-  mymcp:
+  cyberchef:
     type: streamable-http
     url: http://host.docker.internal:3001/mcp
+  weather:
+    type: streamable-http
+    url: http://host.docker.internal:9999/mcp
