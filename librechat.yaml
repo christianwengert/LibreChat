@@ -42,29 +42,33 @@ memory:  # this is a bit weird, did not yet fully understand how this works
 
 fileConfig:
   endpoints:
-    agents:
-      fileLimit: 5
-      fileSizeLimit: 100  # Maximum size for an individual file in MB
-      totalSizeLimit: 500  # Maximum total size for all files in a single request in MB
-      supportedMimeTypes:
-        - "image/.*"
-        - "application/pdf"
-        - "video/.*"
-        - "application/vnd.ms-excel"
-        - "audio/mp3"
-        - "audio/mpeg"
-        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        - "application/msword"
+#    agents:
+#      fileLimit: 5
+#      fileSizeLimit: 100  # Maximum size for an individual file in MB
+#      totalSizeLimit: 500  # Maximum total size for all files in a single request in MB
     default:
-      totalSizeLimit: 20
-    custom:
-      fileLimit: 5
-      fileSizeLimit: 100
-      supportedMimeTypes:
-        - "image/.*"
-        - "application/pdf"
-        - "text/.*"
+      totalSizeLimit: 100
+#      supportedMimeTypes:
+#        - "image/.*"
+#        - "text/.*"
+#        - "application/pdf"
+#        - "video/.*"
+#        - "application/vnd.ms-excel"
+##        - "application/x-yaml"
+#        - "audio/mp3"
+#        - "audio/mpeg"
+#        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+#        - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+#        - "application/msword"
+#    custom:
+#      fileLimit: 5
+#      fileSizeLimit: 100
+#      supportedMimeTypes:
+#        - "image/.*"
+#        - "application/pdf"
+#        - "text/.*"
+#        - "text/markdown"
+##        - "text/markdown"
   serverFileSizeLimit: 1000
   avatarSizeLimit: 2
   imageGeneration:
