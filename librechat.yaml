@@ -21,6 +21,9 @@ interface:
   multiConvo: false
   agents: true
   customWelcome: "Hey {{user.name}}! Welcome to LibreChat"
+  marketplace:
+    use: false
+  fileCitations: true
 
 
 memory:  # this is a bit weird, did not yet fully understand how this works
@@ -99,7 +102,8 @@ endpoints:
 #shared:
 #  titleMethod: "completion"
 #  summaryMethod: "completion"
-
+registration:
+  socialLogins: []
 
 # Pin a single default model/preset so new chats just work
 modelSpecs:
@@ -141,7 +145,7 @@ mcpServers:
       - "@modelcontextprotocol/server-filesystem"
       - /tmp
     iconPath: /home/user/LibreChat/client/public/assets/logo.svg
-    # The “wrench” icon shows up if no icon is provided as it is the default rendering.
+     The “wrench” icon shows up if no icon is provided as it is the default rendering.
   cyberchef:
     type: streamable-http
     url: http://host.docker.internal:3001/mcp
