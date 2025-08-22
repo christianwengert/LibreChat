@@ -5,12 +5,16 @@ services:
   api:
     volumes:
       - ./librechat.yaml:/app/librechat.yaml
+      # - ./overrides/registerSW.js:/app/client/dist/registerSW.js
+      - ./overrides/client.js:/app/api/server/controllers/agents/client.js
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - ENDPOINTS=custom,agents
   rag_api:
     image: ghcr.io/danny-avila/librechat-rag-api-dev:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 # ────────────────────── Extra services ──────────────────────
 #  cyberchef-server:
 #    container_name: cyberchef-server      # optional – makes the name stable

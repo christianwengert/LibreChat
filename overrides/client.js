@@ -4,7 +4,6 @@ const { logger } = require('@librechat/data-schemas');
 const { DynamicStructuredTool } = require('@langchain/core/tools');
 const { getBufferString, HumanMessage } = require('@langchain/core/messages');
 const z = require('zod'); // or import { z } from 'zod';/.schema
-libr
 const {
   sendEvent,
   createRun,
