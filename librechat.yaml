@@ -24,6 +24,7 @@ interface:
   marketplace:
     use: false
   fileCitations: true
+  webSearch: false
 
 
 memory:  # this is a bit weird, did not yet fully understand how this works
@@ -85,7 +86,7 @@ endpoints:
     disableBuilder: false
     # (optional) Agent Capabilities available to all users. Omit the ones you wish to exclude. Defaults to list below.
     # capabilities: ["execute_code", "file_search", "actions", "tools", "artifacts", "ocr", "chain", "web_search"]
-    capabilities: [ "file_search", "actions", "tools", "chain" ]
+    capabilities: [ "file_search", "actions", "tools", "chain", "web_search"]
   custom:
     - name: "llama.cpp"
       apiKey: "whatever"
@@ -108,6 +109,13 @@ endpoints:
 #  summaryMethod: "completion"
 registration:
   socialLogins: []
+
+webSearch:
+  # Search Provider Configuration
+  searxngInstanceUrl: "http://localhost:8888/"
+  searxngApiKey: "no-op"
+  searchProvider: "searxng" # Options: "serper", "searxng"
+
 
 # Pin a single default model/preset so new chats just work
 modelSpecs:
