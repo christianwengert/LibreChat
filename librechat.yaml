@@ -165,3 +165,6 @@ mcpServers:
   weather:
     type: streamable-http
     url: http://host.docker.internal:9999/mcp
+  pythonCodeExecutor:
+    type: streamable-http
+    url: http://host.docker.internal:3003/mcp

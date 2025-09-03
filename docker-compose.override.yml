@@ -19,6 +19,14 @@ services:
 #    volumes:
 #      - ./overrides/client.js:/app/api/server/controllers/agents/client.js
 # ────────────────────── Extra services ──────────────────────
+  semgrep-mcp:
+    # docker run -p 8000:0000 ghcr.io/semgrep/mcp
+    container_name: semgrep-mcp
+    image: ghcr.io/semgrep/mcp
+    ports:
+      - "3999:8000"
+    restart: unless-stopped
+
 #  cyberchef-server:
 #    container_name: cyberchef-server      # optional – makes the name stable
 #    image: cyberchef-server                # defaults to latest tag
