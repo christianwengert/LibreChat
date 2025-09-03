@@ -35,23 +35,23 @@ const {
   bedrockInputSchema,
   removeNullishValues,
 } = require('librechat-data-provider');
-const {
-  findPluginAuthsByKeys,
-  getFormattedMemories,
-  deleteMemory,
-  setMemory,
-} = require('~/models');
-const { getMCPAuthMap, checkCapability, hasCustomUserVars } = require('~/server/services/Config');
 const { addCacheControl, createContextHandlers } = require('~/app/clients/prompts');
 const { initializeAgent } = require('~/server/services/Endpoints/agents/agent');
 const { spendTokens, spendStructuredTokens } = require('~/models/spendTokens');
+const {
+  getFormattedMemories,
+  deleteMemory,
+  setMemory,
+  findPluginAuthsByKeys,
+} = require('~/models');
 const { encodeAndFormat } = require('~/server/services/Files/images/encode');
 const { getProviderConfig } = require('~/server/services/Endpoints');
+const { checkCapability } = require('~/server/services/Config');
 const BaseClient = require('~/app/clients/BaseClient');
 const { getRoleByName } = require('~/models/Role');
 const { loadAgent } = require('~/models/Agent');
 const { getMCPManager } = require('~/config');
-console.log('Hihihi');
+
 const omitTitleOptions = new Set([
   'stream',
   'thinking',
@@ -617,6 +617,7 @@ class AgentClient extends BaseClient {
     await this.chatCompletion({
       payload,
       onProgress: opts.onProgress,
+      userMCPAuthMap: opts.userMCPAuthMap,
       abortController: opts.abortController,
     });
     return this.contentParts;
@@ -749,7 +750,13 @@ class AgentClient extends BaseClient {
     return currentMessageTokens > 0 ? currentMessageTokens : originalEstimate;
   }
 
-  async chatCompletion({ payload, abortController = null }) {
+  /**
+   * @param {object} params
+   * @param {string | ChatCompletionMessageParam[]} params.payload
+   * @param {Record<string, Record<string, string>>} [params.userMCPAuthMap]
+   * @param {AbortController} [params.abortController]
+   */
+  async chatCompletion({ payload, userMCPAuthMap, abortController = null }) {
     /** @type {Partial<GraphRunnableConfig>} */
     let config;
     /** @type {ReturnType<reateRun>} */
@@ -770,6 +777,11 @@ class AgentClient extends BaseClient {
           last_agent_index: this.agentConfigs?.size ?? 0,
           user_id: this.user ?? this.options.req.user?.id,
           hide_sequential_outputs: this.options.agent.hide_sequential_outputs,
+          requestBody: {
+            messageId: this.responseMessageId,
+            conversationId: this.conversationId,
+            parentMessageId: this.parentMessageId,
+          },
           user: this.options.req.user,
         },
         recursionLimit: agentsEConfig?.recursionLimit ?? 25,
@@ -821,6 +833,8 @@ class AgentClient extends BaseClient {
         const systemMessage = Object.values(agent.toolContextMap ?? {})
           .join('\n')
           .trim();
+
+
         let systemContent = [
           systemMessage,
           agent.instructions ?? '',
@@ -828,6 +842,7 @@ class AgentClient extends BaseClient {
         ]
           .join('\n')
           .trim();
+
         if (noSystemMessages === true) {
           agent.instructions = undefined;
           agent.additional_instructions = undefined;
@@ -838,7 +853,7 @@ class AgentClient extends BaseClient {
 
         if (noSystemMessages === true && systemContent?.length) {
           const latestMessageContent = _messages.pop().content;
-          if (typeof latestMessage !== 'string') {
+          if (typeof latestMessageContent !== 'string') {
             latestMessageContent[0].text = [systemContent, latestMessageContent[0].text].join('\n');
             _messages.push(new HumanMessage({ content: latestMessageContent }));
           } else {
@@ -858,6 +873,7 @@ class AgentClient extends BaseClient {
         ) {
           messages = addCacheControl(messages);
         }
+
         if (i === 0) {
           memoryPromise = this.runMemory(messages);
         }
@@ -934,21 +950,9 @@ class AgentClient extends BaseClient {
           run.Graph.contentData = contentData;
         }
 
-        try {
-          if (await hasCustomUserVars()) {
-            config.configurable.userMCPAuthMap = await getMCPAuthMap({
-              tools: agent.tools,
-              userId: this.options.req.user.id,
-              findPluginAuthsByKeys,
-            });
-          }
-        } catch (err) {
-          logger.error(
-            `[api/server/controllers/agents/client.js #chatCompletion] Error getting custom user vars for agent ${agent.id}`,
-            err,
-          );
+        if (userMCPAuthMap != null) {
+          config.configurable.userMCPAuthMap = userMCPAuthMap;
         }
-
         await run.processStream({ messages }, config, {
           keepContent: i !== 0,
           tokenCounter: createTokenCounter(this.getEncoding()),
@@ -961,8 +965,7 @@ class AgentClient extends BaseClient {
 
         config.signal = null;
       };
-      console.log('AGENT');
-      console.log(initialMessages);
+
       await runAgent(this.options.agent, initialMessages);
       let finalContentStart = 0;
       if (
@@ -1040,8 +1043,7 @@ class AgentClient extends BaseClient {
             const bufferMessage = new HumanMessage(bufferString);
             runIndexCountMap[contextMessages.length] = tokenCounter(bufferMessage);
             const currentMessages = [...contextMessages, bufferMessage];
-            console.log('AGENT2');
-            console.log(currentMessages);
+
             await runAgent(agent, currentMessages, i, contentData, runIndexCountMap);
           } catch (err) {
             logger.error(
@@ -1073,6 +1075,7 @@ class AgentClient extends BaseClient {
         if (attachments && attachments.length > 0) {
           this.artifactPromises.push(...attachments);
         }
+
         await this.recordCollectedUsage({ context: 'message' });
       } catch (err) {
         logger.error(
@@ -1118,7 +1121,6 @@ class AgentClient extends BaseClient {
 
     /** @type {import('@librechat/agents').ClientOptions} */
     let clientOptions = {
-      maxTokens: 75,
       model: agent.model || agent.model_parameters.model,
     };
 
@@ -1185,15 +1187,13 @@ class AgentClient extends BaseClient {
       clientOptions.configuration = options.configOptions;
     }
 
-    const shouldRemoveMaxTokens = /\b(o\d|gpt-[5-9])\b/i.test(clientOptions.model);
-    if (shouldRemoveMaxTokens && clientOptions.maxTokens != null) {
+    if (clientOptions.maxTokens != null) {
       delete clientOptions.maxTokens;
-    } else if (!shouldRemoveMaxTokens && !clientOptions.maxTokens) {
-      clientOptions.maxTokens = 75;
     }
-    if (shouldRemoveMaxTokens && clientOptions?.modelKwargs?.max_completion_tokens != null) {
+    if (clientOptions?.modelKwargs?.max_completion_tokens != null) {
       delete clientOptions.modelKwargs.max_completion_tokens;
-    } else if (shouldRemoveMaxTokens && clientOptions?.modelKwargs?.max_output_tokens != null) {
+    }
+    if (clientOptions?.modelKwargs?.max_output_tokens != null) {
       delete clientOptions.modelKwargs.max_output_tokens;
     }
 

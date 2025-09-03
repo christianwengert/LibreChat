@@ -22,7 +22,6 @@ var fake = require('../llm/fake.cjs');
 /* eslint-disable no-console */
 // src/graphs/Graph.ts
 const { AGENT, TOOLS } = _enum.GraphNodeKeys;
-console.log("RAGGGA")
 class Graph {
     lastToken;
     tokenTypeSwitch;
@@ -578,15 +577,43 @@ class StandardGraph extends Graph {
             console.warn('No Tool ID provided for Tool Error');
             return;
         }
-        const stepId = graph.toolCallStepIds.get(data.id) ?? '';
+        let stepId = graph.toolCallStepIds.get(data.id) ?? '';
+        let runStep = null;
         if (!stepId) {
-            throw new Error(`No stepId found for tool_call_id ${data.id}`);
+            // Late registration for error path
+            try {
+                const args = data.input;
+                const argsStr = typeof args === 'string' ? args : JSON.stringify(args ?? '');
+                const toolName = data.name || '';
+                graph.runSteps = graph.runSteps || [];
+                graph.runStepsById = graph.runStepsById || new Map();
+                stepId = `${Date.now()}-${data.id}`;
+                runStep = {
+                    id: stepId,
+                    index: graph.runSteps.length,
+                    type: 'tool_call',
+                    tool_call: { id: data.id, name: toolName, args: argsStr, output: '', progress: 0 },
+                };
+                graph.runSteps.push(runStep);
+                graph.runStepsById.set(stepId, runStep);
+                graph.toolCallStepIds = graph.toolCallStepIds || new Map();
+                graph.toolCallStepIds.set(data.id, stepId);
+                try {
+                    graph.handlerRegistry?.getHandler(_enum.GraphEvents.ON_RUN_STEP_CREATED)?.handle(
+                        _enum.GraphEvents.ON_RUN_STEP_CREATED,
+                        { result: { id: stepId, index: runStep.index, type: 'tool_call', tool_call: runStep.tool_call } },
+                        metadata,
+                        graph
+                    );
+                } catch (_) { /* ignore create event errors */ }
+            } catch (e) {
+                console.error('[Graph] Failed to late-register tool_call_id on error', data.id, e);
+                // Fallback: swallow to avoid crashing the run
+                return;
+            }
         }
+        runStep = runStep || graph.getRunStep?.(stepId) || graph.runStepsById?.get?.(stepId) || null;
         const { name, input: args, error } = data;
-        const runStep = graph.getRunStep(stepId);
-        if (!runStep) {
-            throw new Error(`No run step found for stepId ${stepId}`);
-        }
         const tool_call = {
             id: data.id,
             name: name || '',
@@ -599,7 +626,7 @@ class StandardGraph extends Graph {
             ?.handle(_enum.GraphEvents.ON_RUN_STEP_COMPLETED, {
             result: {
                 id: stepId,
-                index: runStep.index,
+                index: runStep?.index ?? 0,
                 type: 'tool_call',
                 tool_call,
             },
@@ -616,13 +643,50 @@ class StandardGraph extends Graph {
         if (!this.config) {
             throw new Error('No config provided');
         }
-        else if (!id) {
-            throw new Error('No step ID found');
+        // If id missing, attempt to synthesize from delta contents (llama.cpp tool streaming)
+        if (!id) {
+            try {
+                const tcid = delta?.tool_call_id || delta?.tool_call?.id || delta?.id;
+                if (tcid) {
+                    // Ensure mapping exists
+                    this.toolCallStepIds = this.toolCallStepIds || new Map();
+                    let stepId = this.toolCallStepIds.get(tcid) ?? '';
+                    if (!stepId) {
+                        // Create a synthetic step record
+                        stepId = `${Date.now()}-${tcid}`;
+                        this.toolCallStepIds.set(tcid, stepId);
+                        // Build a minimal runStep entry
+                        this.runSteps = this.runSteps || [];
+                        this.runStepsById = this.runStepsById || new Map();
+                        const argsStr = typeof delta?.args === 'string' ? delta.args : JSON.stringify(delta?.args ?? '');
+                        const toolName = delta?.name || '';
+                        const runStep = {
+                            id: stepId,
+                            index: this.runSteps.length,
+                            type: 'tool_call',
+                            tool_call: { id: tcid, name: toolName, args: argsStr, output: '', progress: 0 },
+                        };
+                        this.runSteps.push(runStep);
+                        this.runStepsById.set(stepId, runStep);
+                        // Emit CREATED to keep UI/event chain consistent
+                        try {
+                            this.handlerRegistry?.getHandler(_enum.GraphEvents.ON_RUN_STEP_CREATED)?.handle(
+                                _enum.GraphEvents.ON_RUN_STEP_CREATED,
+                                { result: { id: stepId, index: runStep.index, type: 'tool_call', tool_call: runStep.tool_call } },
+                                undefined,
+                                this
+                            );
+                        } catch (_) { /* ignore create event errors */ }
+                    }
+                    id = stepId;
+                }
+            } catch (e) {
+                // As a last resort, avoid throwing to keep the stream alive
+                console.warn('[Graph] Unable to synthesize step ID for delta; dispatching without run step');
+                return; // no-op rather than crashing
+            }
         }
-        const runStepDelta = {
-            id,
-            delta,
-        };
+        const runStepDelta = { id, delta };
         dispatch.dispatchCustomEvent(_enum.GraphEvents.ON_RUN_STEP_DELTA, runStepDelta, this.config);
     }
     dispatchMessageDelta(id, delta) {
