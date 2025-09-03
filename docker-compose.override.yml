@@ -5,7 +5,7 @@ services:
   api:
     volumes:
       - ./librechat.yaml:/app/librechat.yaml
-      # - ./overrides/registerSW.js:/app/client/dist/registerSW.js
+#      - ./overrides/registerSW.js:/app/client/dist/registerSW.js
       - ./overrides/client.js:/app/api/server/controllers/agents/client.js
       - ./overrides/Graph.cjs:/app/node_modules/@librechat/agents/dist/cjs/graphs/Graph.cjs
     extra_hosts:

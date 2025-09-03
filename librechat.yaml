@@ -129,7 +129,8 @@ modelSpecs:
         model: "Devstral-Small-2507-Q8_0.gguf"
 #        temperature: 1.0
 #        top_p: 0.95
-        max_tokens: 128000
+        maxContextTokens: 131072   # new: raise context budget
+        max_tokens: 8192           # generation cap (separate from context)
     - name: "agents"
       label: "AI Agents"
       description: "Access specialized AI agents for complex tasks."
@@ -160,7 +161,7 @@ mcpServers:
      The “wrench” icon shows up if no icon is provided as it is the default rendering.
   cyberchef:
     type: streamable-http
-    url: http://host.docker.internal:3001/mcp
+    url: http://host.docker.internal:3002/mcp
   weather:
     type: streamable-http
     url: http://host.docker.internal:9999/mcp
