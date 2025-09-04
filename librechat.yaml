@@ -162,9 +162,13 @@ mcpServers:
   cyberchef:
     type: streamable-http
     url: http://host.docker.internal:3002/mcp
-  weather:
-    type: streamable-http
-    url: http://host.docker.internal:9999/mcp
   pythonCodeExecutor:
     type: streamable-http
     url: http://host.docker.internal:3003/mcp
+#  hashcat:
+#    type: streamable-http
+#    url: http://host.docker.internal:3004/mcp
+#    iconPath: /app/client/public/assets/extra_icons/hashcat-logo.svg
+#  semgrep:
+#    type: streamable-http
+#    url: https://mcp.semgrep.ai/mcp
