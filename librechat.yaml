@@ -165,10 +165,18 @@ mcpServers:
   pythonCodeExecutor:
     type: streamable-http
     url: http://host.docker.internal:3003/mcp
-#  hashcat:
+  hashcat:
+    type: streamable-http
+    url: http://host.docker.internal:3006/mcp
+  wireshark:
+    type: streamable-http
+    url: http://host.docker.internal:3013/mcp
+  openproject:
+    type: streamable-http
+    url: http://host.docker.internal:3014/mcp
+#  alphavantage:
 #    type: streamable-http
-#    url: http://host.docker.internal:3004/mcp
-#    iconPath: /app/client/public/assets/extra_icons/hashcat-logo.svg
+#    url: https://mcp.alphavantage.co/mcp?apikey=8L3JJ8S6PDAPUT8I
 #  semgrep:
 #    type: streamable-http
 #    url: https://mcp.semgrep.ai/mcp
