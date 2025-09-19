@@ -98,7 +98,7 @@ endpoints:
         fetch: false # fetching list of models is not supported
       titleConvo: true
       titleModel: "current_model"
-      summarize: false
+      summarize: true
       summaryModel: "current_model"
       forcePrompt: false
       modelDisplayLabel: "assistant"
@@ -130,7 +130,7 @@ modelSpecs:
 #        temperature: 1.0
 #        top_p: 0.95
         maxContextTokens: 131072   # new: raise context budget
-        max_tokens: 8192           # generation cap (separate from context)
+        max_tokens: 32768           # generation cap (separate from context)
     - name: "agents"
       label: "AI Agents"
       description: "Access specialized AI agents for complex tasks."
