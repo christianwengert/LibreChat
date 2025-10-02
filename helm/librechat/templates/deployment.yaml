@@ -52,7 +52,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.service.containerPort | default .Values.service.port }}
               protocol: TCP
           lifecycle:
             {{- toYaml .Values.lifecycle | nindent 12 }}
@@ -83,6 +83,10 @@ spec:
           - secretRef:
               name: {{ .Values.global.librechat.existingSecretName }}
               optional: true
+          {{- end }}
+          {{- with .Values.global.librechat.env }}
+          env:
+          {{- toYaml . | nindent 12 }}
           {{- end }}
       volumes:
       {{- if or .Values.librechat.configYamlContent .Values.librechat.existingConfigYaml }}

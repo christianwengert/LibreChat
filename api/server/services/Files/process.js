@@ -625,7 +625,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
     );
 
     if (!shouldUseText) {
-      throw new Error(`File type ${file.mimetype} is not supported for OCR or text parsing`);
+      throw new Error(`File type ${file.mimetype} is not supported for text parsing.`);
     }
 
     const { text, bytes } = await parseText({ req, file, file_id });
