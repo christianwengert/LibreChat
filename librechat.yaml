@@ -24,6 +24,7 @@ interface:
   marketplace:
     use: false
   fileCitations: true
+  fileSearch: true
   webSearch: false
 
 
@@ -34,7 +35,7 @@ memory:  # this is a bit weird, did not yet fully understand how this works
   personalize: true
   messageWindowSize: 5
   agent:
-    provider: "llama.cpp"
+    provider: "llamacpp"
     model: "Devstral-Small-2507-Q8_0.gguf"
     instructions: "You are a helpful assistant that remembers user preferences and context."
     model_parameters:
@@ -49,27 +50,27 @@ fileConfig:
 #      totalSizeLimit: 500  # Maximum total size for all files in a single request in MB
     default:
       totalSizeLimit: 100
-#      supportedMimeTypes:
-#        - "image/.*"
-#        - "text/.*"
-#        - "application/pdf"
-#        - "video/.*"
-#        - "application/vnd.ms-excel"
-##        - "application/x-yaml"
+      supportedMimeTypes:
+        - "image/.*"
+        - "text/.*"
+        - "application/pdf"
+        - "video/.*"
+        - "application/vnd.ms-excel"
+        - "application/x-yaml"
 #        - "audio/mp3"
 #        - "audio/mpeg"
-#        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-#        - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-#        - "application/msword"
-#    custom:
-#      fileLimit: 5
-#      fileSizeLimit: 100
-#      supportedMimeTypes:
-#        - "image/.*"
-#        - "application/pdf"
-#        - "text/.*"
+        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        - "application/msword"
+    llamacpp:
+      fileLimit: 5
+      fileSizeLimit: 100
+      supportedMimeTypes:
+        - "image/.*"
+        - "application/pdf"
+        - "text/.*"
+        - "text/markdown"
 #        - "text/markdown"
-##        - "text/markdown"
   serverFileSizeLimit: 1000
   avatarSizeLimit: 2
   imageGeneration:
@@ -88,7 +89,7 @@ endpoints:
     # capabilities: ["execute_code", "file_search", "actions", "tools", "artifacts", "ocr", "chain", "web_search"]
     capabilities: [ "file_search", "actions", "tools", "chain", "web_search"]
   custom:
-    - name: "llama.cpp"
+    - name: "llamacpp"
       apiKey: "whatever"
       baseURL: "http://host.docker.internal:8080/v1" 
       models:
@@ -98,7 +99,7 @@ endpoints:
         fetch: false # fetching list of models is not supported
       titleConvo: true
       titleModel: "current_model"
-      summarize: true
+      summarize: false
       summaryModel: "current_model"
       forcePrompt: false
       modelDisplayLabel: "assistant"
@@ -125,7 +126,7 @@ modelSpecs:
 #      iconUrl: "/app/client/public/assets/openai.svg"
       default: true
       preset:
-        endpoint: "llama.cpp"     # must match the custom endpoint name above
+        endpoint: "llamacpp"     # must match the custom endpoint name above
         model: "Devstral-Small-2507-Q8_0.gguf"
 #        temperature: 1.0
 #        top_p: 0.95
@@ -174,9 +175,10 @@ mcpServers:
   openproject:
     type: streamable-http
     url: http://host.docker.internal:3014/mcp
-#  alphavantage:
-#    type: streamable-http
-#    url: https://mcp.alphavantage.co/mcp?apikey=8L3JJ8S6PDAPUT8I
+  packet-analysis:
+    type: streamable-http
+    url: http://host.docker.internal:8765/mcp
+    timeout: 120000
 #  semgrep:
 #    type: streamable-http
 #    url: http://host.docker.internal:3999/mcp

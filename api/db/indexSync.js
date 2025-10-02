@@ -1,10 +1,8 @@
 const mongoose = require('mongoose');
 const { MeiliSearch } = require('meilisearch');
 const { logger } = require('@librechat/data-schemas');
-const { FlowStateManager } = require('@librechat/api');
 const { CacheKeys } = require('librechat-data-provider');
-
-const { isEnabled } = require('~/server/utils');
+const { isEnabled, FlowStateManager } = require('@librechat/api');
 const { getLogStores } = require('~/cache');
 
 const Conversation = mongoose.models.Conversation;

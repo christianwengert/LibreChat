@@ -7,7 +7,7 @@ var googleVertexai = require('@langchain/google-vertexai');
 var langgraph = require('@langchain/langgraph');
 var dispatch = require('@langchain/core/callbacks/dispatch');
 var messages = require('@langchain/core/messages');
-var _enum = require('../common/enum.cjs');
+var _enum$1 = require('../common/enum.cjs');
 var providers = require('../llm/providers.cjs');
 var ToolNode = require('../tools/ToolNode.cjs');
 var core = require('../messages/core.cjs');
@@ -21,12 +21,12 @@ var fake = require('../llm/fake.cjs');
 
 /* eslint-disable no-console */
 // src/graphs/Graph.ts
-const { AGENT, TOOLS } = _enum.GraphNodeKeys;
+const { AGENT, TOOLS } = _enum$1.GraphNodeKeys;
 class Graph {
     lastToken;
     tokenTypeSwitch;
     reasoningKey = 'reasoning_content';
-    currentTokenType = _enum.ContentTypes.TEXT;
+    currentTokenType = _enum$1.ContentTypes.TEXT;
     messageStepHasToolCalls = new Map();
     messageIdsByStepKey = new Map();
     prelimMessageIdsByStepKey = new Map();
@@ -62,6 +62,8 @@ class StandardGraph extends Graph {
     provider;
     toolEnd;
     signal;
+    runSteps = [];
+    runStepsById = undefined;
     constructor({ runId, tools, signal, toolMap, provider, streamBuffer, instructions, reasoningKey, clientOptions, toolEnd = false, additional_instructions = '', }) {
         super();
         this.runId = runId;
@@ -86,7 +88,7 @@ class StandardGraph extends Graph {
         }
         if (finalInstructions != null &&
             finalInstructions &&
-            provider === _enum.Providers.ANTHROPIC &&
+            provider === _enum$1.Providers.ANTHROPIC &&
             (clientOptions.clientOptions
                 ?.defaultHeaders?.['anthropic-beta']?.includes('prompt-caching') ??
                 false)) {
@@ -117,7 +119,7 @@ class StandardGraph extends Graph {
         this.messageIdsByStepKey = graph.resetIfNotEmpty(this.messageIdsByStepKey, new Map());
         this.messageStepHasToolCalls = graph.resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
         this.prelimMessageIdsByStepKey = graph.resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
-        this.currentTokenType = graph.resetIfNotEmpty(this.currentTokenType, _enum.ContentTypes.TEXT);
+        this.currentTokenType = graph.resetIfNotEmpty(this.currentTokenType, _enum$1.ContentTypes.TEXT);
         this.lastToken = graph.resetIfNotEmpty(this.lastToken, undefined);
         this.tokenTypeSwitch = graph.resetIfNotEmpty(this.tokenTypeSwitch, undefined);
         this.indexTokenCountMap = graph.resetIfNotEmpty(this.indexTokenCountMap, {});
@@ -179,7 +181,7 @@ class StandardGraph extends Graph {
             metadata.langgraph_step,
             metadata.checkpoint_ns,
         ];
-        if (this.currentTokenType === _enum.ContentTypes.THINK ||
+        if (this.currentTokenType === _enum$1.ContentTypes.THINK ||
             this.currentTokenType === 'think_and_text') {
             keyList.push('reasoning');
         }
@@ -240,7 +242,7 @@ class StandardGraph extends Graph {
                 .presencePenalty;
             model.n = this.clientOptions.n;
         }
-        else if (this.provider === _enum.Providers.VERTEXAI &&
+        else if (this.provider === _enum$1.Providers.VERTEXAI &&
             model instanceof googleVertexai.ChatVertexAI) {
             model.temperature = this.clientOptions
                 .temperature;
@@ -316,10 +318,10 @@ class StandardGraph extends Graph {
                 this.tokenCounter &&
                 this.maxContextTokens != null &&
                 this.indexTokenCountMap[0] != null) {
-                const isAnthropicWithThinking = (this.provider === _enum.Providers.ANTHROPIC &&
+                const isAnthropicWithThinking = (this.provider === _enum$1.Providers.ANTHROPIC &&
                     this.clientOptions.thinking !=
                         null) ||
-                    (this.provider === _enum.Providers.BEDROCK &&
+                    (this.provider === _enum$1.Providers.BEDROCK &&
                         this.clientOptions
                             .additionalModelRequestFields?.['thinking'] != null);
                 this.pruneMessages = prune.createPruneMessages({
@@ -347,14 +349,14 @@ class StandardGraph extends Graph {
             const lastMessageY = finalMessages.length >= 1
                 ? finalMessages[finalMessages.length - 1]
                 : null;
-            if (provider === _enum.Providers.BEDROCK &&
+            if (provider === _enum$1.Providers.BEDROCK &&
                 lastMessageX instanceof messages.AIMessageChunk &&
                 lastMessageY instanceof messages.ToolMessage &&
                 typeof lastMessageX.content === 'string') {
                 finalMessages[finalMessages.length - 2].content = '';
             }
             const isLatestToolMessage = lastMessageY instanceof messages.ToolMessage;
-            if (isLatestToolMessage && provider === _enum.Providers.ANTHROPIC) {
+            if (isLatestToolMessage && provider === _enum$1.Providers.ANTHROPIC) {
                 core.formatAnthropicArtifactContent(finalMessages);
             }
             else if (isLatestToolMessage &&
@@ -375,7 +377,7 @@ class StandardGraph extends Graph {
                 const stream$1 = await this.boundModel.stream(finalMessages, config);
                 let finalChunk;
                 for await (const chunk of stream$1) {
-                    dispatch.dispatchCustomEvent(_enum.GraphEvents.CHAT_MODEL_STREAM, { chunk }, config);
+                    dispatch.dispatchCustomEvent(_enum$1.GraphEvents.CHAT_MODEL_STREAM, { chunk }, config);
                     if (!finalChunk) {
                         finalChunk = chunk;
                     }
@@ -427,7 +429,7 @@ class StandardGraph extends Graph {
             throw new Error('No config provided');
         }
         const [stepId, stepIndex] = this.generateStepId(stepKey);
-        if (stepDetails.type === _enum.StepTypes.TOOL_CALLS && stepDetails.tool_calls) {
+        if (stepDetails.type === _enum$1.StepTypes.TOOL_CALLS && stepDetails.tool_calls) {
             for (const tool_call of stepDetails.tool_calls) {
                 const toolCallId = tool_call.id ?? '';
                 if (!toolCallId || this.toolCallStepIds.has(toolCallId)) {
@@ -450,7 +452,7 @@ class StandardGraph extends Graph {
         }
         this.contentData.push(runStep);
         this.contentIndexMap.set(stepId, runStep.index);
-        dispatch.dispatchCustomEvent(_enum.GraphEvents.ON_RUN_STEP, runStep, this.config);
+        dispatch.dispatchCustomEvent(_enum$1.GraphEvents.ON_RUN_STEP, runStep, this.config);
         return stepId;
     }
     handleToolCallCompleted(data, metadata, omitOutput) {
@@ -462,89 +464,92 @@ class StandardGraph extends Graph {
         }
         const { input, output } = data;
         const { tool_call_id } = output;
-
-        // console.error(
-        //   "[Graph] ToolCallCompleted with no step found",
-        //   "tool_call_id:", tool_call_id,
-        //   "current stepIds:", Object.keys(this.stepsByToolCallId || {})
-        // );
-        //
-
-        // const stepId = this.toolCallStepIds.get(tool_call_id) ?? '';
-        // if (!stepId) {
-        //     throw new Error(`No stepId found for tool_call_id ${tool_call_id}`);
-        // }
-
-
         let stepId = this.toolCallStepIds?.get(tool_call_id) ?? '';
         let runStep = null;
         if (!stepId) {
-          // Late registration hot-fix: create a step if we never saw the start.
-          try {
-            const dispatchedArgs = typeof input === 'string' ? input : input?.input;
-            const argsStr = typeof dispatchedArgs === 'string' ? dispatchedArgs : JSON.stringify(dispatchedArgs ?? '');
-            const toolName = output.name ?? '';
-
-            // Ensure containers exist
-            this.runSteps = this.runSteps || [];
-            this.toolCallStepIds = this.toolCallStepIds || new Map();
-            // Some builds keep a fast lookup; if not present, create one
-            this.runStepsById = this.runStepsById || new Map();
-
-            stepId = `${Date.now()}-${tool_call_id}`;
-            runStep = {
-              id: stepId,
-              index: this.runSteps.length,
-              type: 'tool_call',
-              tool_call: { id: tool_call_id, name: toolName, args: argsStr, output: '', progress: 0 },
-            };
-
-            // Register in all known places
-            this.runSteps.push(runStep);
-            this.runStepsById.set(stepId, runStep);
-            this.toolCallStepIds.set(tool_call_id, stepId);
-
-            // If your runtime expects a CREATED event before COMPLETED, emit it
+            // Late registration hot-fix: create a step if we never saw the start.
             try {
-              this.handlerRegistry?.getHandler(_enum.GraphEvents.ON_RUN_STEP_CREATED)
-                ?.handle(
-                  _enum.GraphEvents.ON_RUN_STEP_CREATED,
-                  { result: { id: stepId, index: runStep.index, type: 'tool_call', tool_call: runStep.tool_call } },
-                  metadata,
-                  this
-                );
-            } catch (e) {
-              // non-fatal: continue to completion
+                const dispatchedArgs = typeof input === 'string' ? input : input?.input;
+                const argsStr = typeof dispatchedArgs === 'string'
+                    ? dispatchedArgs
+                    : JSON.stringify(dispatchedArgs ?? '');
+                const toolName = output.name ?? '';
+                // Ensure containers exist
+                this.runSteps = this.runSteps || [];
+                this.toolCallStepIds = this.toolCallStepIds || new Map();
+                // Some builds keep a fast lookup; if not present, create one
+                this.runStepsById = this.runStepsById || new Map();
+                stepId = `${Date.now()}-${tool_call_id}`;
+                runStep = {
+                    id: stepId,
+                    index: this.runSteps.length,
+                    type: 'tool_call',
+                    tool_call: {
+                        id: tool_call_id,
+                        name: toolName,
+                        args: argsStr,
+                        output: '',
+                        progress: 0,
+                    },
+                };
+                // Register in all known places
+                this.runSteps.push(runStep);
+                this.runStepsById.set(stepId, runStep);
+                this.toolCallStepIds.set(tool_call_id, stepId);
+                // If your runtime expects a CREATED event before COMPLETED, emit it
+                try {
+                    this.handlerRegistry
+                        ?.getHandler(_enum$1.GraphEvents.ON_RUN_STEP_CREATED)
+                        ?.handle(_enum$1.GraphEvents.ON_RUN_STEP_CREATED, {
+                        result: {
+                            id: stepId,
+                            index: runStep.index,
+                            type: 'tool_call',
+                            tool_call: runStep.tool_call,
+                        },
+                    }, metadata, this);
+                }
+                catch (e) {
+                    // non-fatal: continue to completion
+                }
+                console.warn('[Graph] Late-registered tool_call_id', tool_call_id, 'as stepId', stepId);
             }
-            console.warn('[Graph] Late-registered tool_call_id', tool_call_id, 'as stepId', stepId);
-          } catch (e) {
-            console.error('[Graph] Failed to late-register tool_call_id', tool_call_id, e);
-            throw new Error(`No stepId found for tool_call_id ${tool_call_id}`);
-          }
+            catch (e) {
+                console.error('[Graph] Failed to late-register tool_call_id', tool_call_id, e);
+                throw new Error(`No stepId found for tool_call_id ${tool_call_id}`);
+            }
         }
-
         // const runStep = this.getRunStep(stepId);
         // if (!runStep) {
         //     throw new Error(`No run step found for stepId ${stepId}`);
         // }
-      if (!runStep) {
-        runStep = this.getRunStep?.(stepId) || this.runStepsById?.get?.(stepId) || null;
         if (!runStep) {
-          // Last-resort reconstruction (should rarely happen)
-          const dispatchedArgs = typeof input === 'string' ? input : input?.input;
-          const argsStr = typeof dispatchedArgs === 'string' ? dispatchedArgs : JSON.stringify(dispatchedArgs ?? '');
-          runStep = {
-            id: stepId,
-            index: this.runSteps?.length ?? 0,
-            type: 'tool_call',
-            tool_call: { id: tool_call_id, name: output.name ?? '', args: argsStr, output: '', progress: 0 },
-          };
-          this.runSteps = this.runSteps || [];
-          this.runSteps.push(runStep);
-          this.runStepsById = this.runStepsById || new Map();
-          this.runStepsById.set(stepId, runStep);
+            runStep =
+                this.getRunStep?.(stepId) || this.runStepsById?.get?.(stepId) || null;
+            if (!runStep) {
+                // Last-resort reconstruction (should rarely happen)
+                const dispatchedArgs = typeof input === 'string' ? input : input?.input;
+                const argsStr = typeof dispatchedArgs === 'string'
+                    ? dispatchedArgs
+                    : JSON.stringify(dispatchedArgs ?? '');
+                runStep = {
+                    id: stepId,
+                    index: this.runSteps?.length ?? 0,
+                    type: 'tool_call',
+                    tool_call: {
+                        id: tool_call_id,
+                        name: output.name ?? '',
+                        args: argsStr,
+                        output: '',
+                        progress: 0,
+                    },
+                };
+                this.runSteps = this.runSteps || [];
+                this.runSteps.push(runStep);
+                this.runStepsById = this.runStepsById || new Map();
+                this.runStepsById.set(stepId, runStep);
+            }
         }
-      }
         const dispatchedOutput = typeof output.content === 'string'
             ? output.content
             : JSON.stringify(output.content);
@@ -556,7 +561,7 @@ class StandardGraph extends Graph {
             output: omitOutput === true ? '' : dispatchedOutput,
             progress: 1,
         };
-        this.handlerRegistry?.getHandler(_enum.GraphEvents.ON_RUN_STEP_COMPLETED)?.handle(_enum.GraphEvents.ON_RUN_STEP_COMPLETED, {
+        this.handlerRegistry?.getHandler(_enum$1.GraphEvents.ON_RUN_STEP_COMPLETED)?.handle(_enum$1.GraphEvents.ON_RUN_STEP_COMPLETED, {
             result: {
                 id: stepId,
                 index: runStep.index,
@@ -599,8 +604,8 @@ class StandardGraph extends Graph {
                 graph.toolCallStepIds = graph.toolCallStepIds || new Map();
                 graph.toolCallStepIds.set(data.id, stepId);
                 try {
-                    graph.handlerRegistry?.getHandler(_enum.GraphEvents.ON_RUN_STEP_CREATED)?.handle(
-                        _enum.GraphEvents.ON_RUN_STEP_CREATED,
+                    graph.handlerRegistry?.getHandler(_enum$1.GraphEvents.ON_RUN_STEP_CREATED)?.handle(
+                        _enum$1.GraphEvents.ON_RUN_STEP_CREATED,
                         { result: { id: stepId, index: runStep.index, type: 'tool_call', tool_call: runStep.tool_call } },
                         metadata,
                         graph
@@ -622,11 +627,11 @@ class StandardGraph extends Graph {
             progress: 1,
         };
         graph.handlerRegistry
-            ?.getHandler(_enum.GraphEvents.ON_RUN_STEP_COMPLETED)
-            ?.handle(_enum.GraphEvents.ON_RUN_STEP_COMPLETED, {
+            ?.getHandler(_enum$1.GraphEvents.ON_RUN_STEP_COMPLETED)
+            ?.handle(_enum$1.GraphEvents.ON_RUN_STEP_COMPLETED, {
             result: {
                 id: stepId,
-                index: runStep?.index ?? 0,
+                index: runStep.index,
                 type: 'tool_call',
                 tool_call,
             },
@@ -670,8 +675,8 @@ class StandardGraph extends Graph {
                         this.runStepsById.set(stepId, runStep);
                         // Emit CREATED to keep UI/event chain consistent
                         try {
-                            this.handlerRegistry?.getHandler(_enum.GraphEvents.ON_RUN_STEP_CREATED)?.handle(
-                                _enum.GraphEvents.ON_RUN_STEP_CREATED,
+                            this.handlerRegistry?.getHandler(_enum$1.GraphEvents.ON_RUN_STEP_CREATED)?.handle(
+                                _enum$1.GraphEvents.ON_RUN_STEP_CREATED,
                                 { result: { id: stepId, index: runStep.index, type: 'tool_call', tool_call: runStep.tool_call } },
                                 undefined,
                                 this
@@ -687,7 +692,7 @@ class StandardGraph extends Graph {
             }
         }
         const runStepDelta = { id, delta };
-        dispatch.dispatchCustomEvent(_enum.GraphEvents.ON_RUN_STEP_DELTA, runStepDelta, this.config);
+        dispatch.dispatchCustomEvent(_enum$1.GraphEvents.ON_RUN_STEP_DELTA, runStepDelta, this.config);
     }
     dispatchMessageDelta(id, delta) {
         if (!this.config) {
@@ -697,7 +702,7 @@ class StandardGraph extends Graph {
             id,
             delta,
         };
-        dispatch.dispatchCustomEvent(_enum.GraphEvents.ON_MESSAGE_DELTA, messageDelta, this.config);
+        dispatch.dispatchCustomEvent(_enum$1.GraphEvents.ON_MESSAGE_DELTA, messageDelta, this.config);
     }
     dispatchReasoningDelta = (stepId, delta) => {
         if (!this.config) {
@@ -707,7 +712,7 @@ class StandardGraph extends Graph {
             id: stepId,
             delta,
         };
-        dispatch.dispatchCustomEvent(_enum.GraphEvents.ON_REASONING_DELTA, reasoningDelta, this.config);
+        dispatch.dispatchCustomEvent(_enum$1.GraphEvents.ON_REASONING_DELTA, reasoningDelta, this.config);
     };
 }
 

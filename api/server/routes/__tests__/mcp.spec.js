@@ -11,6 +11,9 @@ jest.mock('@librechat/api', () => ({
     completeOAuthFlow: jest.fn(),
     generateFlowId: jest.fn(),
   },
+  MCPTokenStorage: {
+    storeTokens: jest.fn(),
+  },
   getUserMCPAuthMap: jest.fn(),
 }));
 

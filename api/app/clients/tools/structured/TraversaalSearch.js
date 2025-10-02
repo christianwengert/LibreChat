@@ -1,7 +1,7 @@
 const { z } = require('zod');
 const { Tool } = require('@langchain/core/tools');
+const { logger } = require('@librechat/data-schemas');
 const { getEnvironmentVariable } = require('@langchain/core/utils/env');
-const { logger } = require('~/config');
 
 /**
  * Tool for the Traversaal AI search API, Ares.

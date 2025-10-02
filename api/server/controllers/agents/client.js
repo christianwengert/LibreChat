@@ -804,18 +804,6 @@ class AgentClient extends BaseClient {
         toolSet,
       );
 
-      // PAYLOAD
-      //
-      // [ { role: 'user', content: [ [Object] ] } ]
-      //
-      // Set(2) {
-      //
-      //   'get_current_weather_mcp_weather',
-      //
-      //   'get_weather_forecast_mcp_weather'
-      //
-      // }
-
       /**
        *
        * @param {Agent} agent
@@ -852,7 +840,6 @@ class AgentClient extends BaseClient {
         const systemMessage = Object.values(agent.toolContextMap ?? {})
           .join('\n')
           .trim();
-
 
         let systemContent = [
           systemMessage,
@@ -1034,7 +1021,6 @@ class AgentClient extends BaseClient {
             const bufferMessage = new HumanMessage(bufferString);
             runIndexCountMap[contextMessages.length] = tokenCounter(bufferMessage);
             const currentMessages = [...contextMessages, bufferMessage];
-
             await runAgent(agent, currentMessages, i, contentData, runIndexCountMap);
           } catch (err) {
             logger.error(
@@ -1135,6 +1121,13 @@ class AgentClient extends BaseClient {
       );
     }
 
+    if (endpointConfig?.titleConvo === false) {
+      logger.debug(
+        `[api/server/controllers/agents/client.js #titleConvo] Title generation disabled for endpoint "${endpoint}"`,
+      );
+      return;
+    }
+
     if (endpointConfig?.titleEndpoint && endpointConfig.titleEndpoint !== endpoint) {
       try {
         titleProviderConfig = getProviderConfig({
@@ -1144,7 +1137,7 @@ class AgentClient extends BaseClient {
         endpoint = endpointConfig.titleEndpoint;
       } catch (error) {
         logger.warn(
-          `[api/server/controllers/agents/client.js #titleConvo] Error getting title endpoint config for ${endpointConfig.titleEndpoint}, falling back to default`,
+          `[api/server/controllers/agents/client.js #titleConvo] Error getting title endpoint config for "${endpointConfig.titleEndpoint}", falling back to default`,
           error,
         );
         // Fall back to original provider config

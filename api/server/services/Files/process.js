@@ -594,10 +594,9 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
 
     const fileConfig = mergeFileConfig(appConfig.fileConfig);
 
-    const shouldUseOCR = fileConfig.checkType(
-      file.mimetype,
-      fileConfig.ocr?.supportedMimeTypes || [],
-    );
+    const shouldUseOCR =
+      appConfig?.ocr != null &&
+      fileConfig.checkType(file.mimetype, fileConfig.ocr?.supportedMimeTypes || []);
 
     if (shouldUseOCR && !(await checkCapability(req, AgentCapabilities.ocr))) {
       throw new Error('OCR capability is not enabled for Agents');
