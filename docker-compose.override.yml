@@ -5,65 +5,125 @@ services:
   api:
     volumes:
       - ./librechat.yaml:/app/librechat.yaml
-#      - ./overrides/registerSW.js:/app/client/dist/registerSW.js
       - ./overrides/client.js:/app/api/server/controllers/agents/client.js
       - ./overrides/Graph.cjs:/app/node_modules/@librechat/agents/dist/cjs/graphs/Graph.cjs
-#      - ./overrides/icons:/app/client/public/assets/extra_icons
+#      - ./api/app/clients/prompts/formatMessages.js:/app/api/app/clients/prompts/formatMessages.js
+#      - /Users/christian/src/LibreChat/api/app/clients/prompts/formatMessages.js:/app/api/app/clients/prompts/formatMessages.js
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - ENDPOINTS=custom,agents
+    depends_on:
+      - mcp-semgrep
+      - mcp_cyberchef
+      - mcp_tartaros
+      - mcp_lll
+      - mcp_python_code_executor
+      - mcp-wireshark
+      - mcp-stat-analysis
+      - mcp-prng-analysis
   rag_api:
     image: ghcr.io/danny-avila/librechat-rag-api-dev:latest
     extra_hosts:
       - "host.docker.internal:host-gateway"
-#    volumes:
-#      - ./overrides/client.js:/app/api/server/controllers/agents/client.js
 # ────────────────────── Extra services ──────────────────────
-#  semgrep-mcp:
-    # docker run -p 8000:0000 ghcr.io/semgrep/mcp
-#    container_name: semgrep-mcp
-#    image: ghcr.io/semgrep/mcp
-#    ports:
-#      - "3999:8000"
-#    restart: unless-stopped
-
-#  cyberchef-server:
-#    container_name: cyberchef-server      # optional – makes the name stable
-#    image: cyberchef-server                # defaults to latest tag
-#    ports:
-#      - "3000:3000"
+  mcp-prng-analysis:
+    container_name: mcp-prng-analysis
+    image: mcp-prng-analysis
+    ports:
+      - "3015:3015"
+    restart: unless-stopped
+  mcp-semgrep:
+    container_name: mcp-semgrep
+    image: mcp-semgrep
+    ports:
+      - "3011:3011"
+    restart: unless-stopped
+  cyberchef-server:
+    container_name: cyberchef-server      # optional – makes the name stable
+    image: cyberchef-server                # defaults to latest tag
+    ports:
+      - "3000:3000"
+    restart: unless-stopped                # optional but handy for production
+  mcp_cyberchef:
+    container_name: mcp_cyberchef
+    image: mcp_cyberchef                # defaults to latest tag
+    restart: unless-stopped                # optional but handy for production
+    ports:
+      - "3002:3002"
+    command: ["--api-url", "http://host.docker.internal:3000/"]
+    depends_on:
+      - cyberchef-server
+  mcp-stat-analysis:
+    container_name: mcp-stat-analysis
+    image: mcp-stat-analysis
+    ports:
+      - "3016:3016"
 #    restart: unless-stopped                # optional but handy for production
-#  cyberchef-server:
-#    # optional – gives a stable, human‑readable container name
-#    container_name: cyberchef-server
-#    platform: linux/amd64          # forces Docker to pull the amd64 variant
-#    # Build the image locally from the Dockerfile in src/CyberChef‑server
-#    build:
-#      context: /Users/christian/src/CyberChef-server   # ← directory that contains the Dockerfile
-#      dockerfile: Dockerfile            # optional – defaults to “Dockerfile”
-#
-#    # The name/tag you want the built image to have (you can omit this and Compose
-#    # will create a name like ${COMPOSE_PROJECT_NAME}_cyberchef-server)
-#    image: cyberchef-server:latest
-#
-#    ports:
-#      - "3000:3000"
-#    restart: unless-stopped
-#
-#  qdrant:
-#    container_name: qdrant
-#    image: qdrant/qdrant
-#    platform: linux/amd64          # forces Docker to pull the amd64 variant
-#    ports:
-#      - "6333:6333"
-#      - "6334:6334"
-#    volumes:
-#      # Bind‑mount the host directory `./qdrant_storage` into the container.
-#      # The trailing `:z` (or `:Z` on SELinux systems) makes the mount
-#      # writable for the container.
-#      - "./qdrant_storage:/qdrant/storage:z"
-#    restart: unless-stopped
+  qdrant:
+    container_name: qdrant
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      # Bind‑mount the host directory `./qdrant_storage` into the container.
+      # The trailing `:z` (or `:Z` on SELinux systems) makes the mount
+      # writable for the container.
+      - "./qdrant_storage:/qdrant/storage:z"
+    restart: unless-stopped
+  mcp_tartaros:
+    container_name: mcp_tartaros
+    image: mcp_tartaros
+    environment:
+      MCP_HOST: 0.0.0.0   # the server binds inside the container
+      MCP_PORT: 8765      # container internal port
+    ports:
+      - "8765:8765"       # host:container
+    volumes:
+      - ./data:/app/data:ro  # optional: let the container read local packet files
+    restart: unless-stopped
+  mcp_lll:
+    container_name: mcp_lll
+    image: mcp-lll
+    environment:
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 3022
+    ports:
+      - "3022:3022"
+    volumes:
+      - ./data:/app/data:ro  # optional: let the container read local packet files
+    restart: unless-stopped
+  mcp_python_code_executor:
+    image: python-code-executor-mcp:latest
+    container_name: mcp_python_code_executor
+    ports:
+      - "3003:3003"  # host:container
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3003
+      # You generally don’t need to set PYTHONDONTWRITEBYTECODE/PYTHONUNBUFFERED; they’re set in the image.
+    volumes:
+      # Persist/inspect executed code workspace created by the image at /app/coding
+      - ./data/python-coding:/app/coding
+      # Optional: if your service needs access to the repo at runtime, bind it (usually not needed):
+      # - ./:/app:ro
+    restart: unless-stopped
+  mcp-wireshark:
+    image: mcp-wireshark:latest
+    container_name: mcp-wireshark
+#    environment:
+#      - HOST=0.0.0.0
+#      - PORT=3013
+      # Optional: TSHARK env var to point to a custom path if needed
+      # - TSHARK=/usr/bin/tshark
+    ports:
+      - "3013:3013"
+    volumes:
+      # Mount your local packets directory so the service can read PCAP/PCAPNG files
+      - ../../packets:/app/packets:ro
+    restart: unless-stopped
+
 #  # ── **AMD‑64‑only** service ────────────────────────────────────────
 #  # Example: a heavy‑weight image that only runs on x86_64 hosts
 #  amd64-llama-cpp-completion:

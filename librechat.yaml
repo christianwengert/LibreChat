@@ -36,10 +36,10 @@ memory:  # this is a bit weird, did not yet fully understand how this works
   messageWindowSize: 5
   agent:
     provider: "llamacpp"
-    model: "Devstral-Small-2507-Q8_0.gguf"
+    model: "gpt-oss-120b"
     instructions: "You are a helpful assistant that remembers user preferences and context."
     model_parameters:
-      temperature: 0.7
+      temperature: 1.0
       max_tokens: 1000
 
 fileConfig:
@@ -94,7 +94,7 @@ endpoints:
       baseURL: "http://host.docker.internal:8080/v1" 
       models:
         default: [
-          "Devstral-Small-2507-Q8_0.gguf"
+          "gpt-oss-120b"
           ]
         fetch: false # fetching list of models is not supported
       titleConvo: true
@@ -127,7 +127,7 @@ modelSpecs:
       default: true
       preset:
         endpoint: "llamacpp"     # must match the custom endpoint name above
-        model: "Devstral-Small-2507-Q8_0.gguf"
+        model: "gpt-oss-120b"
 #        temperature: 1.0
 #        top_p: 0.95
         maxContextTokens: 131072   # new: raise context budget
@@ -138,7 +138,7 @@ modelSpecs:
       showIconInMenu: true
       showIconInHeader: true
       preset:
-        model: "Devstral-Small-2507-Q8_0.gguf"
+        model: "gpt-oss-120b"
         default: true
         endpoint: "agents"
         max_tokens: 131072
@@ -151,7 +151,7 @@ modelSpecs:
 
 # Example MCP Servers Object Structure
 mcpServers:
-  filesystem:
+  Filesystem:
     # type: stdio
     command: npx
     args:
@@ -160,26 +160,28 @@ mcpServers:
       - /tmp
     iconPath: /home/user/LibreChat/client/public/assets/logo.svg
      The “wrench” icon shows up if no icon is provided as it is the default rendering.
-  cyberchef:
+  Cyberchef:
     type: streamable-http
     url: http://host.docker.internal:3002/mcp
-  pythonCodeExecutor:
+  LLL:
+    type: streamable-http
+    url: http://host.docker.internal:3022/mcp
+  "Tyche: PRNG Analysis (discover params for LCG, PCG, LSFR)":
+    type: streamable-http
+    url: http://host.docker.internal:3015/mcp
+  "Chaos (Statistical Analysis of PRNGs)":
+    type: streamable-http
+    url: http://host.docker.internal:3016/mcp
+  "Python (Code Executor)":
     type: streamable-http
     url: http://host.docker.internal:3003/mcp
-  hashcat:
-    type: streamable-http
-    url: http://host.docker.internal:3006/mcp
-  wireshark:
-    type: streamable-http
-    url: http://host.docker.internal:3013/mcp
-  openproject:
-    type: streamable-http
-    url: http://host.docker.internal:3014/mcp
-  packet-analysis:
+  "Tartaros (Statistical Protocol Analysis)":
     type: streamable-http
     url: http://host.docker.internal:8765/mcp
     timeout: 120000
-#  semgrep:
-#    type: streamable-http
-#    url: http://host.docker.internal:3999/mcp
-#
+  "Wireshark (PCAP Analysis)":
+    type: streamable-http
+    url: http://host.docker.internal:3013/mcp
+  "semgrep (Vuln Scanner)":
+    type: streamable-http
+    url: http://host.docker.internal:3011/mcp
