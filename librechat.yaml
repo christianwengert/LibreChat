@@ -158,6 +158,7 @@ mcpServers:
       - -y
       - "@modelcontextprotocol/server-filesystem"
       - /tmp
+      - /data
     iconPath: /home/user/LibreChat/client/public/assets/logo.svg
      The “wrench” icon shows up if no icon is provided as it is the default rendering.
   Cyberchef:
@@ -185,3 +186,6 @@ mcpServers:
   "semgrep (Vuln Scanner)":
     type: streamable-http
     url: http://host.docker.internal:3011/mcp
+  "Long runner":
+    type: streamable-http
+    url: http://host.docker.internal:3023/mcp

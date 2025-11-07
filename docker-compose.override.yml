@@ -7,6 +7,7 @@ services:
       - ./librechat.yaml:/app/librechat.yaml
       - ./overrides/client.js:/app/api/server/controllers/agents/client.js
       - ./overrides/Graph.cjs:/app/node_modules/@librechat/agents/dist/cjs/graphs/Graph.cjs
+      - /Users/christian/Downloads:/data
 #      - ./api/app/clients/prompts/formatMessages.js:/app/api/app/clients/prompts/formatMessages.js
 #      - /Users/christian/src/LibreChat/api/app/clients/prompts/formatMessages.js:/app/api/app/clients/prompts/formatMessages.js
     extra_hosts:
